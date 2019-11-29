@@ -1,8 +1,12 @@
 ﻿using System;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using NServiceBus;
 using NServiceBus.Raw;
 using StateBased.ConsistentMessaging.Console.Infrastructure;
+
+[assembly: InternalsVisibleTo("StateBased.ConsistentMessaging.Tests")]
 
 namespace StateBased.ConsistentMessaging.Console
 {
@@ -12,7 +16,7 @@ namespace StateBased.ConsistentMessaging.Console
 
         static async Task Main(string[] args)
         {
-            var endpoint = await SetupEndpoint();
+            var (endpoint, _) = await SetupEndpoint();
 
             var gameId = Guid.NewGuid();
 
@@ -45,21 +49,21 @@ namespace StateBased.ConsistentMessaging.Console
             }
         }
 
-        static async Task<IReceivingRawEndpoint> SetupEndpoint()
+        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint()
         {
             IReceivingRawEndpoint endpoint = null;
-            var sagaStorage = new SagaStore();
+            var sagaStore = new SagaStore();
 
             var endpointConfiguration = RawEndpointConfiguration.Create(
                 endpointName: EndpointName,
-                onMessage: (c, d) => HandlerInvoker.OnMessage(c, sagaStorage, endpoint),
+                onMessage: (c, d) => HandlerInvoker.OnMessage(c, sagaStore, endpoint),
                 poisonMessageQueue: "error");
 
             endpointConfiguration.UseTransport<LearningTransport>();
 
             endpoint =  await RawEndpoint.Start(endpointConfiguration);
 
-            return endpoint;
+            return (endpoint, sagaStore);
         }
 
         class ConsoleCommand
