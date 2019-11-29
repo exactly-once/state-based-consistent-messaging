@@ -1,4 +1,5 @@
-﻿using StateBased.ConsistentMessaging.Console.Infrastructure;
+﻿using System;
+using StateBased.ConsistentMessaging.Console.Infrastructure;
 
 namespace StateBased.ConsistentMessaging.Console
 {
@@ -10,11 +11,19 @@ namespace StateBased.ConsistentMessaging.Console
         {
             if (TargetPosition == command.Position)
             {
-                context.Publish(new Hit{AttemptId = command.AttemptId});
+                context.Publish(new Hit
+                {
+                    Id = Guid.NewGuid(),
+                    GameId = command.GameId
+                });
             }
             else
             {
-                context.Publish(new Missed{AttemptId = command.AttemptId});
+                context.Publish(new Missed
+                {
+                    Id = Guid.NewGuid(),
+                    GameId = command.GameId
+                });
             }
         }
 

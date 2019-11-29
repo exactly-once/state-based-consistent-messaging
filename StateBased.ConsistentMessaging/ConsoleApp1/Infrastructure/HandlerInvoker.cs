@@ -19,22 +19,22 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 
             if (message is FireAt fireAt)
             {
-                return Invoke<ShootingRange, FireAt>(fireAt.AttemptId, fireAt);
+                return Invoke<ShootingRange, FireAt>(fireAt.GameId, fireAt);
             }
 
             if (message is MoveTarget moveTarget)
             {
-                return Invoke<ShootingRange, MoveTarget>(moveTarget.AttemptId, moveTarget);
+                return Invoke<ShootingRange, MoveTarget>(moveTarget.GameId, moveTarget);
             }
 
             if (message is Missed missed)
             {
-                return Invoke<LeaderBoard, Missed>(missed.AttemptId, missed);
+                return Invoke<LeaderBoard, Missed>(missed.GameId, missed);
             }
 
             if (message is Hit hit)
             {
-                return Invoke<LeaderBoard, Hit>(hit.AttemptId, hit);
+                return Invoke<LeaderBoard, Hit>(hit.GameId, hit);
             }
 
             System.Console.WriteLine($"Unknown message type: {message.GetType().FullName}");

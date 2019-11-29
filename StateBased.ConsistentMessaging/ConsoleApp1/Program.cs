@@ -12,35 +12,93 @@ namespace StateBased.ConsistentMessaging.Console
 
         static async Task Main(string[] args)
         {
-            var sagaStore = new SagaStore();
-            IReceivingRawEndpoint endpoint = null;
+            var endpoint = await SetupEndpoint();
 
-            var endpointConfiguration = RawEndpointConfiguration.Create(
-                endpointName: EndpointName,
-                onMessage: (c,d) => HandlerInvoker.OnMessage(c, sagaStore, endpoint),
-                poisonMessageQueue: "error");
-            endpointConfiguration.UseTransport<LearningTransport>();
-
-            endpoint = await RawEndpoint.Start(endpointConfiguration);
+            var gameId = Guid.NewGuid();
 
             while (true)
             {
-                var command = System.Console.ReadKey();
+                var commandText = System.Console.ReadLine();
 
-                switch (command.Key)
+                if (ConsoleCommand.TryParse(commandText, out var command))
                 {
-                    case ConsoleKey.F : 
-                        await endpoint.Send(new FireAt { AttemptId = Guid.NewGuid(), Position = 42 } );
-                        break;
-                    case ConsoleKey.M :
-                        await endpoint.Send(new MoveTarget { Position = 1 });
-                        break;
+                    if (command.Type == ConsoleCommand.CommandType.FireAt)
+                    {
+                        await endpoint.Send(new FireAt
+                        {
+                            Id = Guid.NewGuid(), 
+                            GameId = gameId,
+                            Position = command.Value
+                        } );
+                    }
+
+                    if (command.Type == ConsoleCommand.CommandType.Move)
+                    {
+                        await endpoint.Send(new MoveTarget
+                        {
+                            Id = Guid.NewGuid(),
+                            GameId = gameId,
+                            Position = command.Value
+                        });
+                    }
                 }
             }
-            
+        }
 
-            System.Console.WriteLine("Hello World!");
-            System.Console.ReadLine();
+        static async Task<IReceivingRawEndpoint> SetupEndpoint()
+        {
+            IReceivingRawEndpoint endpoint = null;
+            var sagaStorage = new SagaStore();
+
+            var endpointConfiguration = RawEndpointConfiguration.Create(
+                endpointName: EndpointName,
+                onMessage: (c, d) => HandlerInvoker.OnMessage(c, sagaStorage, endpoint),
+                poisonMessageQueue: "error");
+
+            endpointConfiguration.UseTransport<LearningTransport>();
+
+            endpoint =  await RawEndpoint.Start(endpointConfiguration);
+
+            return endpoint;
+        }
+
+        class ConsoleCommand
+        {
+            public int Value { get; set; }
+
+            public CommandType Type { get; set; }
+
+            public static bool TryParse(string commandText, out ConsoleCommand command)
+            {
+                command = new ConsoleCommand {Type = CommandType.Unknown};;
+
+                if (commandText == null || commandText.Length < 2)
+                {
+                    return false;
+                }
+
+                var commandType = commandText[0];
+
+                if (!int.TryParse(commandText.Substring(1), out var commandValue))
+                {
+                    return false;
+                }
+
+                command = new ConsoleCommand
+                {
+                    Value = commandValue,
+                    Type = commandType == 'f' ? CommandType.FireAt : CommandType.Move
+                };
+
+                return true;
+            }
+
+            public enum CommandType
+            {
+                Move,
+                FireAt,
+                Unknown
+            }
         }
     }
 }
