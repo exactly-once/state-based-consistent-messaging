@@ -5,11 +5,11 @@ namespace StateBased.ConsistentMessaging.Console
 {
     class ShootingRange
     {
-        public int TargetPosition { get; set; }
+        public ShootingRangeData Data { get; set; }
 
         public void Handle(IHandlerContext context, FireAt command)
         {
-            if (TargetPosition == command.Position)
+            if (Data.TargetPosition == command.Position)
             {
                 context.Publish(new Hit
                 {
@@ -29,7 +29,22 @@ namespace StateBased.ConsistentMessaging.Console
 
         public void Handle(IHandlerContext context, MoveTarget command)
         {
-            TargetPosition = command.Position;
+            Data.Apply(new TargetMoved{Position = command.Position});
+        }
+
+        public class ShootingRangeData : EventSourcedData
+        {
+            public int TargetPosition { get; set; }
+
+            public void When(TargetMoved @event)
+            {
+                TargetPosition = @event.Position;
+            }
+        }
+
+        public class TargetMoved
+        {
+            public int Position { get; set; }
         }
     }
 }

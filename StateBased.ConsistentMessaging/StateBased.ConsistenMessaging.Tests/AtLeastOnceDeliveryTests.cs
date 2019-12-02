@@ -30,7 +30,7 @@ namespace StateBased.ConsistentMessaging.Tests
                 new MoveTarget {Id = Guid.NewGuid(), GameId = gameId, Position = 1}
             });
 
-            await WaitFor<ShootingRange>(gameId, version: 1);
+            await WaitFor<ShootingRange.ShootingRangeData>(gameId, version: 1);
 
             await Dispatch(new[]
             {
@@ -38,9 +38,9 @@ namespace StateBased.ConsistentMessaging.Tests
                 new FireAt {Id = attemptId, GameId = gameId, Position = 1}
             });
 
-            await WaitFor<LeaderBoard>(gameId, 2);
+            await WaitFor<LeaderBoard.LeaderBoardData>(gameId, 2);
 
-            var (leaderBoard, _) = storage.Get<LeaderBoard>(gameId);
+            var (leaderBoard, _) = storage.Get<LeaderBoard.LeaderBoardData>(gameId);
 
             Assert.AreEqual(1, leaderBoard.NumberOfHits);
         }

@@ -19,22 +19,22 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 
             if (message is FireAt fireAt)
             {
-                return Invoke<ShootingRange, FireAt>(fireAt.GameId, fireAt);
+                return Invoke<ShootingRange, ShootingRange.ShootingRangeData>(fireAt.GameId, fireAt);
             }
 
             if (message is MoveTarget moveTarget)
             {
-                return Invoke<ShootingRange, MoveTarget>(moveTarget.GameId, moveTarget);
+                return Invoke<ShootingRange, ShootingRange.ShootingRangeData>(moveTarget.GameId, moveTarget);
             }
 
             if (message is Missed missed)
             {
-                return Invoke<LeaderBoard, Missed>(missed.GameId, missed);
+                return Invoke<LeaderBoard, LeaderBoard.LeaderBoardData>(missed.GameId, missed);
             }
 
             if (message is Hit hit)
             {
-                return Invoke<LeaderBoard, Hit>(hit.GameId, hit);
+                return Invoke<LeaderBoard, LeaderBoard.LeaderBoardData>(hit.GameId, hit);
             }
 
             System.Console.WriteLine($"Unknown message type: {message.GetType().FullName}");
@@ -42,13 +42,16 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
             return Task.CompletedTask;
         }
 
-        static async Task Invoke<TSaga, TMessage>(Guid sagaId, TMessage inputMessage) where TSaga : new()
+        static async Task Invoke<TSaga, TSagaData>(Guid sagaId, object inputMessage) where TSaga : new() where TSagaData : new()
         {
             var handlerContext = new HandlerContext();
 
-            var (saga, version) = SagaStore.Get<TSaga>(sagaId);
+            var (saga, version) = SagaStore.Get<TSagaData>(sagaId);
+            
+            var handler = new TSaga();
 
-            ((dynamic)saga).Handle(handlerContext, inputMessage);
+            ((dynamic) handler).Data = saga;
+            ((dynamic) handler).Handle(handlerContext, (dynamic)inputMessage);
             
             SagaStore.Save(sagaId, saga, version);
 
