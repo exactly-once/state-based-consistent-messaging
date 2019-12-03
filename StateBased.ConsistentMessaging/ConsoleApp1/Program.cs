@@ -2,6 +2,8 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Marten;
+using Marten.Events;
 using NServiceBus;
 using NServiceBus.Raw;
 using StateBased.ConsistentMessaging.Console.Infrastructure;
@@ -52,7 +54,14 @@ namespace StateBased.ConsistentMessaging.Console
         internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint()
         {
             IReceivingRawEndpoint endpoint = null;
-            var sagaStore = new SagaStore();
+            
+            var documentStore = DocumentStore.For(_ =>
+            {
+                _.Connection(@"User ID=postgres;Password=yourPassword;Host=localhost;Port=5432;Database=exactly-once;");
+                _.Events.StreamIdentity = StreamIdentity.AsString;
+            });
+
+            var sagaStore = new SagaStore(documentStore);
 
             var endpointConfiguration = RawEndpointConfiguration.Create(
                 endpointName: EndpointName,

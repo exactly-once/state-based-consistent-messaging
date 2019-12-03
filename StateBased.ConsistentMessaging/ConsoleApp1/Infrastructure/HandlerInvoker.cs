@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus.Raw;
 using NServiceBus.Transport;
@@ -7,8 +9,8 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 {
     static class HandlerInvoker
     {
-        private static SagaStore SagaStore;
         private static IReceivingRawEndpoint Endpoint;
+        private static SagaStore SagaStore;
 
         public static Task OnMessage(MessageContext context, SagaStore sagaStore, IReceivingRawEndpoint endpoint)
         {
@@ -42,23 +44,34 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
             return Task.CompletedTask;
         }
 
-        static async Task Invoke<TSaga, TSagaData>(Guid sagaId, object inputMessage) where TSaga : new() where TSagaData : new()
+        static async Task Invoke<TSaga, TSagaData>(Guid sagaId, Message inputMessage) 
+            where TSaga : new() 
+            where TSagaData : EventSourcedData, new()
         {
+            var messageId = inputMessage.Id;
+
+            var (saga, version, duplicate) = await SagaStore.LoadSaga<TSagaData>(sagaId, messageId);
+
+            var outputMessages = InvokeHandler<TSaga, TSagaData>(inputMessage, saga);
+
+            if (duplicate == false)
+            { 
+                await SagaStore.UpdateSaga<TSagaData>(sagaId, version, saga.Changes, messageId);
+            }
+
+            await Task.WhenAll(outputMessages.Select(m => Endpoint.Send(m)));
+        }
+
+        private static List<object> InvokeHandler<TSaga, TSagaData>(object inputMessage, TSagaData saga)
+            where TSaga : new() where TSagaData : EventSourcedData, new()
+        {
+            var handler = new TSaga();
             var handlerContext = new HandlerContext();
 
-            var (saga, version) = SagaStore.Get<TSagaData>(sagaId);
-            
-            var handler = new TSaga();
-
             ((dynamic) handler).Data = saga;
-            ((dynamic) handler).Handle(handlerContext, (dynamic)inputMessage);
+            ((dynamic) handler).Handle(handlerContext, (dynamic) inputMessage);
             
-            SagaStore.Save(sagaId, saga, version);
-
-            foreach (var outgoingMessage in handlerContext.Messages)
-            {
-                await Endpoint.Send(outgoingMessage);
-            }
+            return handlerContext.Messages;
         }
     }
 }

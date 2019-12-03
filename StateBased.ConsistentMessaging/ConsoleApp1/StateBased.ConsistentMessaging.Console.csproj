@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Marten" Version="3.10.0" />
     <PackageReference Include="NServiceBus.Raw" Version="3.0.2" />
   </ItemGroup>
 

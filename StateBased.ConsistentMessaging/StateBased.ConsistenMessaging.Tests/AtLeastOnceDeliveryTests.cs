@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Marten;
 using NServiceBus.Raw;
 using NUnit.Framework;
 using StateBased.ConsistentMessaging.Console;
@@ -40,22 +41,23 @@ namespace StateBased.ConsistentMessaging.Tests
 
             await WaitFor<LeaderBoard.LeaderBoardData>(gameId, 2);
 
-            var (leaderBoard, _) = storage.Get<LeaderBoard.LeaderBoardData>(gameId);
+            var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
 
             Assert.AreEqual(1, leaderBoard.NumberOfHits);
         }
 
         Task Dispatch(Message[] messages) => Task.WhenAll(messages.Select(m => endpoint.Send(m)).ToArray());
 
-        async Task WaitFor<TSaga>(Guid sagaId, int version) where TSaga : new()
+        async Task WaitFor<TSagaData>(Guid sagaId, int version) where TSagaData : EventSourcedData, new()
         {
-            var (_, cVersion) = storage.Get<TSaga>(sagaId);
+
+            var (_, cVersion, __) = await storage.LoadSaga<TSagaData>(sagaId, Guid.Empty);
 
             while(cVersion != version)
             { 
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
 
-                (_, cVersion) = storage.Get<TSaga>(sagaId);
+                (_, cVersion, __) = await storage.LoadSaga<TSagaData>(sagaId, Guid.Empty);
             }
         }
     }
