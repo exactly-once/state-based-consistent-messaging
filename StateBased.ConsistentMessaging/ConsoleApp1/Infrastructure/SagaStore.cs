@@ -1,100 +1,117 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Marten;
-using Marten.Events;
+using Microsoft.Azure.Cosmos.Table;
+using Newtonsoft.Json;
+using NServiceBus;
+using Streamstone;
 
 namespace StateBased.ConsistentMessaging.Console.Infrastructure
 {
     class SagaStore
     {
-        readonly DocumentStore documentStore;
+        readonly CloudTable table;
 
-        public SagaStore(DocumentStore documentStore)
+        public SagaStore(CloudTable table)
         {
-            this.documentStore = documentStore;
+            this.table = table;
         }
 
-        public async Task<(TSagaData, int, bool)> LoadSaga<TSagaData>(Guid sagaId, Guid messageId) where TSagaData : EventSourcedData, new()
+        public async Task<(TSagaData, Stream, bool)> LoadSaga<TSagaData>(Guid sagaId, Guid messageId) where TSagaData : EventSourcedData, new()
         {
             var streamId = $"{typeof(TSagaData).Name}-{sagaId}";
-
-            var stream = await ReadStream(streamId);
-            var version = stream.Count;
-
-            var isDuplicate = false;
+            var partition = new Partition(table, streamId);
 
             var saga = new TSagaData();
 
-            foreach (var @event in stream)
-            {
-                var correlatedEvent = (MessageCorrelatedEvent) @event.Data;
+            var existent = await Stream.TryOpenAsync(partition);
 
-                if (correlatedEvent.MessageId != messageId && isDuplicate)
+            if (existent.Found == false)
+            {
+                var createdStream = await Stream.ProvisionAsync(partition);
+
+                return (saga, createdStream, false);
+            }
+
+            var isDuplicate = false;
+
+            var stream = await ReadStream(partition, properties =>
+            {
+                var mId = Guid.Parse(properties["MessageId"].StringValue);
+                var data = properties["Data"].StringValue;
+                var type = Type.GetType(properties["Type"].StringValue);
+
+                var @event = JsonConvert.DeserializeObject(data, type);
+
+                if (mId != messageId && isDuplicate)
                 {
-                    break;
+                    return true;
                 }
 
-                if (correlatedEvent.MessageId == messageId)
+                if (mId == messageId)
                 {
                     isDuplicate = true;
                 }
 
-                if (correlatedEvent.Change != null)
+                if (@event != null)
                 {
-                    saga.Apply(correlatedEvent.Change);
+                    saga.Apply(@event);
                 }
-            }
+
+                return isDuplicate;
+            });
 
             saga.Changes.Clear();
 
-            return (saga, version, isDuplicate);
+            return (saga, stream, isDuplicate);
         }
 
-        public async Task UpdateSaga<TSagaData>(Guid sagaId, int version, List<object> changes, Guid messageId)
+        private static async Task<Stream> ReadStream(Partition partition, Func<EventProperties, bool> process)
         {
-            var streamId = $"{typeof(TSagaData).Name}-{sagaId}";
+            StreamSlice<EventProperties> slice;
 
-            var correlatedChanges = changes.Select(c => new MessageCorrelatedEvent
-            {
-                Change = c,
-                MessageId = messageId
-            }).ToList();
+            var nextSliceStart = 1;
+            var sliceSize = 1;
 
-            if (correlatedChanges.Count == 0)
+            while(true)
             {
-                correlatedChanges.Add(new MessageCorrelatedEvent{MessageId = messageId});
+                slice = await Stream.ReadAsync(partition, nextSliceStart, sliceSize);
+
+                foreach (var @event in slice.Events)
+                {
+                    if (process(@event)) break;
+                }
+
+                nextSliceStart += nextSliceStart + slice.Events.Length;
             }
 
-            using var session = documentStore.OpenSession();
-            
-            var eventStore = session.Events;
-
-            var expectedVersion = version + correlatedChanges.Count;
-            
-            eventStore.Append(streamId, expectedVersion, correlatedChanges.ToArray());
-
-            await session.SaveChangesAsync();
+            return slice.Stream;
         }
 
-        private async Task<IReadOnlyCollection<IEvent>> ReadStream(string streamId)
+        public Task UpdateSaga(Stream stream, List<object> changes, Guid messageId)
         {
-            IReadOnlyCollection<IEvent> stream;
-            using (var session = documentStore.OpenSession())
+            if (changes.Count == 0)
             {
-                var eventStore = session.Events;
-
-                stream = await eventStore.FetchStreamAsync(streamId);
+                changes.Add(null);
             }
 
-            return stream;
-        }
+            var events = changes.Select(c =>
+            {
+                var eventId = EventId.From(Guid.NewGuid());
 
-        class MessageCorrelatedEvent
-        {
-            public object Change { get; set; }
-            public Guid MessageId { get; set; }
+                var properties = EventProperties.From(new
+                {
+                    MessageId = messageId,
+                    Type = c.GetType().FullName,
+                    Data = JsonConvert.SerializeObject(c)
+                });
+
+                return new EventData(eventId, properties);
+            }).ToArray();
+
+            return Stream.WriteAsync(stream, events);
         }
     }
 }

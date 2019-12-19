@@ -50,13 +50,13 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
         {
             var messageId = inputMessage.Id;
 
-            var (saga, version, duplicate) = await SagaStore.LoadSaga<TSagaData>(sagaId, messageId);
+            var (saga, stream, duplicate) = await SagaStore.LoadSaga<TSagaData>(sagaId, messageId);
 
             var outputMessages = InvokeHandler<TSaga, TSagaData>(inputMessage, saga);
 
             if (duplicate == false)
             { 
-                await SagaStore.UpdateSaga<TSagaData>(sagaId, version, saga.Changes, messageId);
+                await SagaStore.UpdateSaga(stream, saga.Changes, messageId);
             }
 
             await Task.WhenAll(outputMessages.Select(m => Endpoint.Send(m)));

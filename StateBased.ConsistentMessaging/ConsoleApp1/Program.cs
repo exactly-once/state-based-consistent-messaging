@@ -2,8 +2,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Marten;
-using Marten.Events;
+using Microsoft.Azure.Cosmos.Table;
 using NServiceBus;
 using NServiceBus.Logging;
 using NServiceBus.Raw;
@@ -52,17 +51,26 @@ namespace StateBased.ConsistentMessaging.Console
             }
         }
 
+        static async Task<CloudTable> PrepareStorageTable()
+        {
+            var table = CloudStorageAccount
+                .DevelopmentStorageAccount
+                .CreateCloudTableClient()
+                .GetTableReference("Example");
+
+            await table.DeleteIfExistsAsync();
+            await table.CreateIfNotExistsAsync();
+
+            return table;
+        }
+
         internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<string> messageProcessed)
         {
             IReceivingRawEndpoint endpoint = null;
-            
-            var documentStore = DocumentStore.For(_ =>
-            {
-                _.Connection(@"User ID=postgres;Password=yourPassword;Host=localhost;Port=5432;Database=exactly-once;");
-                _.Events.StreamIdentity = StreamIdentity.AsString;
-            });
 
-            var sagaStore = new SagaStore(documentStore);
+            var storageTable = await PrepareStorageTable();
+
+            var sagaStore = new SagaStore(storageTable);
 
             var endpointConfiguration = RawEndpointConfiguration.Create(
                 endpointName: EndpointName,

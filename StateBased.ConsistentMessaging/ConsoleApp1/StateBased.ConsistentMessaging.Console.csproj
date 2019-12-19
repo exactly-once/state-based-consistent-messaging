@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Marten" Version="3.10.0" />
     <PackageReference Include="NServiceBus.Raw" Version="3.0.2" />
+    <PackageReference Include="Streamstone" Version="2.3.0" />
   </ItemGroup>
 
 </Project>
