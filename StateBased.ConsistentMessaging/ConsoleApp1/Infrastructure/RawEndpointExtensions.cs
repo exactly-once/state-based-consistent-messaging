@@ -12,11 +12,16 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
     {
         public static Task Send(this IReceivingRawEndpoint endpoint, object message)
         {
+            return Send(endpoint, message, Guid.NewGuid());
+        }
+
+        public static Task Send(this IReceivingRawEndpoint endpoint, object message, Guid messageId)
+        {
             var headers = new Dictionary<string, string>();
             var body = Serializer.Serialize(message, headers);
 
             var request = new OutgoingMessage(
-                messageId: Guid.NewGuid().ToString(),
+                messageId: messageId.ToString(),
                 headers: headers,
                 body: body);
 

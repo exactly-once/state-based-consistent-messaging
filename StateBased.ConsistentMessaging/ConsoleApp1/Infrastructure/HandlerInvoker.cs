@@ -41,7 +41,7 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 
             System.Console.WriteLine($"Unknown message type: {message.GetType().FullName}");
 
-            return Task.CompletedTask;
+            throw new Exception("Unknown message type");
         }
 
         static async Task Invoke<TSaga, TSagaData>(Guid sagaId, Message inputMessage) 

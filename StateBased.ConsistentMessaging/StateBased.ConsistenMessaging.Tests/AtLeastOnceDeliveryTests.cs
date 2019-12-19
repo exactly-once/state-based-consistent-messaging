@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Marten;
+using NServiceBus;
 using NServiceBus.Raw;
 using NUnit.Framework;
 using StateBased.ConsistentMessaging.Console;
@@ -13,11 +15,16 @@ namespace StateBased.ConsistentMessaging.Tests
     {
         private IReceivingRawEndpoint endpoint;
         private SagaStore storage;
-
+        private ConcurrentDictionary<Guid, int> messageProcessed;
         [SetUp]
         public async Task Setup()
         {
-            (endpoint, storage) = await Program.SetupEndpoint();
+            messageProcessed = new ConcurrentDictionary<Guid, int>();
+
+            (endpoint, storage) = await Program.SetupEndpoint(messageId =>
+                {
+                    messageProcessed.AddOrUpdate(Guid.Parse(messageId), mId => 1, (mId, c) => c + 1);
+                });
         }
 
         [Test]
@@ -25,13 +32,14 @@ namespace StateBased.ConsistentMessaging.Tests
         {
             var gameId = Guid.NewGuid();
             var attemptId = Guid.NewGuid();
+            var moveId = Guid.NewGuid();
 
             await Dispatch(new[]
             {
-                new MoveTarget {Id = Guid.NewGuid(), GameId = gameId, Position = 1}
+                new MoveTarget {Id = moveId, GameId = gameId, Position = 1}
             });
 
-            await WaitFor<ShootingRange.ShootingRangeData>(gameId, version: 1);
+            await WaitFor(moveId, 1);
 
             await Dispatch(new[]
             {
@@ -39,25 +47,28 @@ namespace StateBased.ConsistentMessaging.Tests
                 new FireAt {Id = attemptId, GameId = gameId, Position = 1}
             });
 
-            await WaitFor<LeaderBoard.LeaderBoardData>(gameId, 2);
+            await WaitFor(attemptId, 2);
 
             var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
 
             Assert.AreEqual(1, leaderBoard.NumberOfHits);
         }
 
-        Task Dispatch(Message[] messages) => Task.WhenAll(messages.Select(m => endpoint.Send(m)).ToArray());
+        Task Dispatch(Message[] messages) => Task.WhenAll(messages.Select(m => endpoint.Send(m, m.Id)).ToArray());
 
-        async Task WaitFor<TSagaData>(Guid sagaId, int version) where TSagaData : EventSourcedData, new()
+        async Task WaitFor(Guid messageId, int count)
         {
+            var timeout = Debugger.IsAttached ? TimeSpan.MaxValue : TimeSpan.FromSeconds(500);
+            var stopwatch = Stopwatch.StartNew();
 
-            var (_, cVersion, __) = await storage.LoadSaga<TSagaData>(sagaId, Guid.Empty);
-
-            while(cVersion != version)
-            { 
+            while (!messageProcessed.TryGetValue(messageId, out var mCount) && mCount != count)
+            {
                 await Task.Delay(TimeSpan.FromMilliseconds(100));
 
-                (_, cVersion, __) = await storage.LoadSaga<TSagaData>(sagaId, Guid.Empty);
+                if (stopwatch.Elapsed > timeout)
+                {
+                    throw new Exception($"Timeout on messageId: {messageId}");
+                }
             }
         }
     }

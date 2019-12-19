@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Marten;
 using Marten.Events;
 using NServiceBus;
+using NServiceBus.Logging;
 using NServiceBus.Raw;
 using StateBased.ConsistentMessaging.Console.Infrastructure;
 
@@ -18,7 +19,7 @@ namespace StateBased.ConsistentMessaging.Console
 
         static async Task Main(string[] args)
         {
-            var (endpoint, _) = await SetupEndpoint();
+            var (endpoint, _) = await SetupEndpoint(_ => {});
 
             var gameId = Guid.NewGuid();
 
@@ -51,7 +52,7 @@ namespace StateBased.ConsistentMessaging.Console
             }
         }
 
-        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint()
+        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<string> messageProcessed)
         {
             IReceivingRawEndpoint endpoint = null;
             
@@ -65,10 +66,19 @@ namespace StateBased.ConsistentMessaging.Console
 
             var endpointConfiguration = RawEndpointConfiguration.Create(
                 endpointName: EndpointName,
-                onMessage: (c, d) => HandlerInvoker.OnMessage(c, sagaStore, endpoint),
+                onMessage: async (c, d) =>
+                {
+                        await HandlerInvoker.OnMessage(c, sagaStore, endpoint);
+                        
+                        messageProcessed(c.MessageId);
+                },
                 poisonMessageQueue: "error");
 
             endpointConfiguration.UseTransport<LearningTransport>();
+
+            var defaultFactory = LogManager.Use<DefaultFactory>();
+            defaultFactory.Level(LogLevel.Debug);
+
 
             endpoint =  await RawEndpoint.Start(endpointConfiguration);
 
