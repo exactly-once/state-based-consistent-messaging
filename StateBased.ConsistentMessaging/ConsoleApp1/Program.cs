@@ -18,7 +18,7 @@ namespace StateBased.ConsistentMessaging.Console
 
         static async Task Main(string[] args)
         {
-            var (endpoint, _) = await SetupEndpoint(_ => {});
+            var (endpoint, _) = await SetupEndpoint((_, __) => {});
 
             var gameId = Guid.NewGuid();
 
@@ -32,7 +32,7 @@ namespace StateBased.ConsistentMessaging.Console
                     {
                         await endpoint.Send(new FireAt
                         {
-                            LogicalId = Guid.NewGuid(), 
+                            Id = Guid.NewGuid(), 
                             GameId = gameId,
                             Position = command.Value
                         } );
@@ -42,7 +42,7 @@ namespace StateBased.ConsistentMessaging.Console
                     {
                         await endpoint.Send(new MoveTarget
                         {
-                            LogicalId = Guid.NewGuid(),
+                            Id = Guid.NewGuid(),
                             GameId = gameId,
                             Position = command.Value
                         });
@@ -64,10 +64,8 @@ namespace StateBased.ConsistentMessaging.Console
             return table;
         }
 
-        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<Guid> messageProcessed)
+        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<Message, Message[]> messageProcessed)
         {
-            IReceivingRawEndpoint endpoint = null;
-
             var storageTable = await PrepareStorageTable();
 
             var sagaStore = new SagaStore(storageTable);
@@ -76,19 +74,24 @@ namespace StateBased.ConsistentMessaging.Console
                 endpointName: EndpointName,
                 onMessage: async (c, d) =>
                 {
-                        var messageId = await HandlerInvoker.OnMessage(c, sagaStore, endpoint);
+                    var message = Serializer.Deserialize(c.Body, c.Headers);
 
-                        messageProcessed(messageId);
+                    var outputMessages = await HandlerInvoker.OnMessage(message, sagaStore);
+
+                    messageProcessed(message, outputMessages);
+
+                    await d.Send(outputMessages);
+
                 },
                 poisonMessageQueue: "error");
 
-            endpointConfiguration.UseTransport<LearningTransport>();
+            endpointConfiguration.UseTransport<LearningTransport>()
+                .Transactions(TransportTransactionMode.None);
 
             var defaultFactory = LogManager.Use<DefaultFactory>();
             defaultFactory.Level(LogLevel.Debug);
 
-
-            endpoint =  await RawEndpoint.Start(endpointConfiguration);
+            var endpoint =  await RawEndpoint.Start(endpointConfiguration);
 
             return (endpoint, sagaStore);
         }

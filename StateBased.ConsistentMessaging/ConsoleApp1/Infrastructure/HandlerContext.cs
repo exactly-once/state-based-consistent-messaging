@@ -4,9 +4,9 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 {
     class HandlerContext : IHandlerContext
     {
-        public List<object> Messages { get; set; } = new List<object>();
+        public List<Message> Messages { get; set; } = new List<Message>();
 
-        public void Publish(object message)
+        public void Publish(Message message)
         {
             Messages.Add(message);
         }
@@ -14,6 +14,6 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 
     internal interface IHandlerContext
     {
-        void Publish(object message);
+        void Publish(Message message);
     }
 }

@@ -1,27 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus.Extensibility;
-using NServiceBus.Raw;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
 
 namespace StateBased.ConsistentMessaging.Console.Infrastructure
 {
-    static class RawEndpointExtensions
+    static class DispatchExtensions
     {
-        public static Task Send(this IReceivingRawEndpoint endpoint, object message)
-        {
-            return Send(endpoint, message, Guid.NewGuid());
-        }
+        public static Task Send(this IDispatchMessages endpoint, Message[] messages) =>
+            Task.WhenAll(messages.Select(endpoint.Send));
 
-        public static Task Send(this IReceivingRawEndpoint endpoint, object message, Guid messageId)
+        public static Task Send(this IDispatchMessages endpoint, Message message)
         {
-            var headers = new Dictionary<string, string>();
+            var headers = new Dictionary<string, string>
+            {
+                {"Message.Id", message.Id.ToString() }
+            };
+
             var body = Serializer.Serialize(message, headers);
 
             var request = new OutgoingMessage(
-                messageId: messageId.ToString(),
+                messageId: Guid.NewGuid().ToString(),
                 headers: headers,
                 body: body);
 

@@ -9,7 +9,7 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 
         public const string MessageTypeName = "MessageType";
 
-        public static byte[] Serialize(object message, Dictionary<string, string> headers)
+        internal static byte[] Serialize(object message, Dictionary<string, string> headers)
         {
             headers.Add(MessageTypeName, message.GetType().FullName);
 
@@ -18,11 +18,13 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
             return Encoding.UTF8.GetBytes(text);
         }
 
-        public static object Deserialize(byte[] body, Dictionary<string, string> headers)
+        internal static Message Deserialize(byte[] body, Dictionary<string, string> headers)
         {
             var messageType = headers[Serializer.MessageTypeName];
             var bodyText = Encoding.UTF8.GetString(body);
-            var message = JsonSerializer.Deserialize(bodyText, Type.GetType(messageType));
+            var message = (Message) JsonSerializer.Deserialize(bodyText, Type.GetType(messageType));
+
+            message.Id = Guid.Parse(headers["Message.Id"]);
 
             return message;
         }

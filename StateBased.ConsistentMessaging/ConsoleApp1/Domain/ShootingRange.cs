@@ -13,7 +13,7 @@ namespace StateBased.ConsistentMessaging.Console
             {
                 context.Publish(new Hit
                 {
-                    LogicalId = command.LogicalId,
+                    Id = command.Id,
                     GameId = command.GameId
                 });
             }
@@ -21,7 +21,7 @@ namespace StateBased.ConsistentMessaging.Console
             {
                 context.Publish(new Missed
                 {
-                    LogicalId = command.LogicalId,
+                    Id = command.Id,
                     GameId = command.GameId
                 });
             }
