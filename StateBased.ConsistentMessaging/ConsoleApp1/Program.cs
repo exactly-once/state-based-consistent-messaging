@@ -32,7 +32,7 @@ namespace StateBased.ConsistentMessaging.Console
                     {
                         await endpoint.Send(new FireAt
                         {
-                            Id = Guid.NewGuid(), 
+                            LogicalId = Guid.NewGuid(), 
                             GameId = gameId,
                             Position = command.Value
                         } );
@@ -42,7 +42,7 @@ namespace StateBased.ConsistentMessaging.Console
                     {
                         await endpoint.Send(new MoveTarget
                         {
-                            Id = Guid.NewGuid(),
+                            LogicalId = Guid.NewGuid(),
                             GameId = gameId,
                             Position = command.Value
                         });
@@ -64,7 +64,7 @@ namespace StateBased.ConsistentMessaging.Console
             return table;
         }
 
-        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<string> messageProcessed)
+        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<Guid> messageProcessed)
         {
             IReceivingRawEndpoint endpoint = null;
 
@@ -76,9 +76,9 @@ namespace StateBased.ConsistentMessaging.Console
                 endpointName: EndpointName,
                 onMessage: async (c, d) =>
                 {
-                        await HandlerInvoker.OnMessage(c, sagaStore, endpoint);
-                        
-                        messageProcessed(c.MessageId);
+                        var messageId = await HandlerInvoker.OnMessage(c, sagaStore, endpoint);
+
+                        messageProcessed(messageId);
                 },
                 poisonMessageQueue: "error");
 

@@ -23,7 +23,7 @@ namespace StateBased.ConsistentMessaging.Tests
 
             (endpoint, storage) = await Program.SetupEndpoint(messageId =>
                 {
-                    messageProcessed.AddOrUpdate(Guid.Parse(messageId), mId => 1, (mId, c) => c + 1);
+                    messageProcessed.AddOrUpdate(messageId, mId => 1, (mId, c) => c + 1);
                 });
         }
 
@@ -36,15 +36,15 @@ namespace StateBased.ConsistentMessaging.Tests
 
             await Dispatch(new[]
             {
-                new MoveTarget {Id = moveId, GameId = gameId, Position = 1}
+                new MoveTarget {LogicalId = moveId, GameId = gameId, Position = 1}
             });
 
             await WaitFor(moveId, 1);
 
             await Dispatch(new[]
             {
-                new FireAt {Id = attemptId, GameId = gameId, Position = 1},
-                new FireAt {Id = attemptId, GameId = gameId, Position = 1}
+                new FireAt {LogicalId = attemptId, GameId = gameId, Position = 1},
+                new FireAt {LogicalId = attemptId, GameId = gameId, Position = 1}
             });
 
             await WaitFor(attemptId, 2);
@@ -54,7 +54,7 @@ namespace StateBased.ConsistentMessaging.Tests
             Assert.AreEqual(1, leaderBoard.NumberOfHits);
         }
 
-        Task Dispatch(Message[] messages) => Task.WhenAll(messages.Select(m => endpoint.Send(m, m.Id)).ToArray());
+        Task Dispatch(Message[] messages) => Task.WhenAll(messages.Select(m => endpoint.Send(m, m.LogicalId)).ToArray());
 
         async Task WaitFor(Guid messageId, int count)
         {

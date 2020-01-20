@@ -12,7 +12,7 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
         private static IReceivingRawEndpoint Endpoint;
         private static SagaStore SagaStore;
 
-        public static Task OnMessage(MessageContext context, SagaStore sagaStore, IReceivingRawEndpoint endpoint)
+        public static Task<Guid> OnMessage(MessageContext context, SagaStore sagaStore, IReceivingRawEndpoint endpoint)
         {
             var message = Serializer.Deserialize(context.Body, context.Headers);
 
@@ -44,11 +44,11 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
             throw new Exception("Unknown message type");
         }
 
-        static async Task Invoke<TSaga, TSagaData>(Guid sagaId, Message inputMessage) 
+        static async Task<Guid> Invoke<TSaga, TSagaData>(Guid sagaId, Message inputMessage) 
             where TSaga : new() 
             where TSagaData : EventSourcedData, new()
         {
-            var messageId = inputMessage.Id;
+            var messageId = inputMessage.LogicalId;
 
             var (saga, stream, duplicate) = await SagaStore.LoadSaga<TSagaData>(sagaId, messageId);
 
@@ -60,6 +60,8 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
             }
 
             await Task.WhenAll(outputMessages.Select(m => Endpoint.Send(m)));
+
+            return messageId;
         }
 
         private static List<object> InvokeHandler<TSaga, TSagaData>(object inputMessage, TSagaData saga)

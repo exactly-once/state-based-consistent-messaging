@@ -26,6 +26,6 @@ namespace StateBased.ConsistentMessaging.Console
 
     class Message
     {
-        public Guid Id { get; set; }
+        public Guid LogicalId { get; set; }
     }
 }

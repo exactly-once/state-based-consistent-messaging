@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
-using NServiceBus;
 using Streamstone;
 
 namespace StateBased.ConsistentMessaging.Console.Infrastructure
@@ -39,11 +37,11 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 
             var stream = await ReadStream(partition, properties =>
             {
-                var mId = Guid.Parse(properties["MessageId"].StringValue);
+                var mId = properties["MessageId"].GuidValue.GetValueOrDefault();
                 var data = properties["Data"].StringValue;
-                var type = Type.GetType(properties["Type"].StringValue);
+                var type = properties.ContainsKey("Type") ? Type.GetType(properties["Type"].StringValue) : null;
 
-                var @event = JsonConvert.DeserializeObject(data, type);
+                var @event = type != null ? JsonConvert.DeserializeObject(data, type) : null;
 
                 if (mId != messageId && isDuplicate)
                 {
@@ -72,20 +70,20 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
         {
             StreamSlice<EventProperties> slice;
 
-            var nextSliceStart = 1;
-            var sliceSize = 1;
+            var sliceStart = 1;
 
-            while(true)
+            do
             {
-                slice = await Stream.ReadAsync(partition, nextSliceStart, sliceSize);
+                slice = await Stream.ReadAsync(partition, sliceStart, sliceSize: 1);
 
                 foreach (var @event in slice.Events)
                 {
                     if (process(@event)) break;
                 }
 
-                nextSliceStart += nextSliceStart + slice.Events.Length;
-            }
+                sliceStart += slice.Events.Length;
+            } 
+            while (slice.HasEvents);
 
             return slice.Stream;
         }
@@ -104,7 +102,7 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
                 var properties = EventProperties.From(new
                 {
                     MessageId = messageId,
-                    Type = c.GetType().FullName,
+                    Type = c?.GetType().FullName,
                     Data = JsonConvert.SerializeObject(c)
                 });
 
