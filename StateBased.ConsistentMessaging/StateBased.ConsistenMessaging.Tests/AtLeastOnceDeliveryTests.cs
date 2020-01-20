@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus.Raw;
@@ -14,56 +13,99 @@ namespace StateBased.ConsistentMessaging.Tests
     {
         private IReceivingRawEndpoint endpoint;
         private SagaStore storage;
-        private ConcurrentDictionary<Guid, int> messageProcessed;
+        private ConcurrentDictionary<Guid, (TaskCompletionSource<bool> cs, int pending)> runs;
 
         [SetUp]
         public async Task Setup()
         {
-            messageProcessed = new ConcurrentDictionary<Guid, int>();
+            runs = new ConcurrentDictionary<Guid, (TaskCompletionSource<bool>, int)>();
 
-            (endpoint, storage) = await Program.SetupEndpoint((message, _) =>
+            (endpoint, storage) = await Program.SetupEndpoint((runId, _, output) =>
+            {
+                var pendingDelta = output.Length - 1;
+
+                var value = runs.AddOrUpdate(
+                    runId,
+                    _ => throw new Exception("Should not happen"),
+                    (id, v) => (v.cs, v.pending + pendingDelta));
+
+                if (value.pending == 0)
                 {
-                    messageProcessed.AddOrUpdate(message.Id, id => 1, (id, c) => c + 1);
-                });
+                    runs.TryRemove(runId, out var _);
+
+                    value.cs.SetResult(true);
+                }
+            });
+        }
+
+        async Task DispatchAndWait(Message[] messages)
+        {
+            var runId = Guid.NewGuid();
+            var cs = new TaskCompletionSource<bool>();
+
+            runs.AddOrUpdate(
+                runId,
+                _ => (cs, messages.Length),
+                (_, __) => throw new Exception("This should not happen"));
+
+            await Task.WhenAll(messages.Select(m => endpoint.Send(m, runId)).ToArray());
+
+            await cs.Task;
         }
 
         [Test]
-        public async Task SimpleDuplication()
+        public async Task ScenarioA()
         {
             var gameId = Guid.NewGuid();
 
             var move = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 1};
             var fire = new FireAt {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
 
-            await Dispatch(new Message[] { move });
-
-            await WaitFor(move.Id, 1);
-
-            await Dispatch(new[] { fire, fire });
-
-            await WaitFor(fire.Id, 2);
+            await DispatchAndWait(new Message[] { move });
+            await DispatchAndWait(new Message[] { fire, fire });
 
             var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
 
             Assert.AreEqual(1, leaderBoard.NumberOfHits);
         }
 
-        Task Dispatch(Message[] messages) => Task.WhenAll(messages.Select(m => endpoint.Send(m)).ToArray());
-
-        async Task WaitFor(Guid messageId, int count)
+        [Test]
+        public async Task ScenarioB()
         {
-            var timeout = Debugger.IsAttached ? TimeSpan.MaxValue : TimeSpan.FromSeconds(500);
-            var stopwatch = Stopwatch.StartNew();
+            var gameId = Guid.NewGuid();
 
-            while (!messageProcessed.TryGetValue(messageId, out var mCount) && mCount != count)
-            {
-                await Task.Delay(TimeSpan.FromMilliseconds(1000));
+            var firstMove = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 1};
+            var fire = new FireAt {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
+            var secondMove = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 2};
 
-                if (stopwatch.Elapsed > timeout)
-                {
-                    throw new Exception($"Timeout on messageId: {messageId}");
-                }
-            }
+            await DispatchAndWait(new Message[] { firstMove });
+            await DispatchAndWait(new Message[] { fire });
+            await DispatchAndWait(new Message[] { secondMove });
+            await DispatchAndWait(new Message[] { fire });
+
+            var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
+
+            Assert.AreEqual(1, leaderBoard.NumberOfHits);
+        }
+
+        [Test]
+        public async Task ScenarioC()
+        {
+            var gameId = Guid.NewGuid();
+
+            var move = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 1};
+            var fire = new FireAt {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
+            var secondMove = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 2};
+
+            await DispatchAndWait(new Message[] { move });
+            await DispatchAndWait(new Message[] { fire, fire, secondMove });
+
+            var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
+            
+            var hits = leaderBoard.NumberOfHits;
+            var misses = leaderBoard.NumberOfMisses;
+
+            Assert.AreEqual(hits + misses, 1);
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos.Table;
@@ -18,7 +17,7 @@ namespace StateBased.ConsistentMessaging.Console
 
         static async Task Main(string[] args)
         {
-            var (endpoint, _) = await SetupEndpoint((_, __) => {});
+            var (endpoint, _) = await SetupEndpoint((_, __, ___) => {});
 
             var gameId = Guid.NewGuid();
 
@@ -64,7 +63,7 @@ namespace StateBased.ConsistentMessaging.Console
             return table;
         }
 
-        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<Message, Message[]> messageProcessed)
+        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<Guid, Message, Message[]> messageProcessed)
         {
             var storageTable = await PrepareStorageTable();
 
@@ -78,15 +77,16 @@ namespace StateBased.ConsistentMessaging.Console
 
                     var outputMessages = await HandlerInvoker.OnMessage(message, sagaStore);
 
-                    messageProcessed(message, outputMessages);
+                    var runId = Guid.Parse(c.Headers["Message.RunId"]);
 
-                    await d.Send(outputMessages);
+                    messageProcessed(runId, message, outputMessages);
 
+                    await d.Send(outputMessages, runId);
                 },
                 poisonMessageQueue: "error");
 
             endpointConfiguration.UseTransport<LearningTransport>()
-                .Transactions(TransportTransactionMode.None);
+                .Transactions(TransportTransactionMode.ReceiveOnly);
 
             var defaultFactory = LogManager.Use<DefaultFactory>();
             defaultFactory.Level(LogLevel.Debug);

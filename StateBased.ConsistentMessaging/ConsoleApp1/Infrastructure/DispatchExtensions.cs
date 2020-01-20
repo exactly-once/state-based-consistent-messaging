@@ -10,14 +10,17 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 {
     static class DispatchExtensions
     {
-        public static Task Send(this IDispatchMessages endpoint, Message[] messages) =>
-            Task.WhenAll(messages.Select(endpoint.Send));
+        public static Task Send(this IDispatchMessages endpoint, Message[] messages, Guid? runId = null) 
+            => Task.WhenAll(messages.Select(m => endpoint.Send(m, runId)));
 
-        public static Task Send(this IDispatchMessages endpoint, Message message)
+        public static Task Send(this IDispatchMessages endpoint, Message message, Guid? runId = null)
         {
+            runId ??= Guid.NewGuid();
+
             var headers = new Dictionary<string, string>
             {
-                {"Message.Id", message.Id.ToString() }
+                {"Message.Id", message.Id.ToString() },
+                {"Message.RunId", runId.ToString() }
             };
 
             var body = Serializer.Serialize(message, headers);
