@@ -1,5 +1,4 @@
-﻿using System;
-using StateBased.ConsistentMessaging.Console.Infrastructure;
+﻿using StateBased.ConsistentMessaging.Console.Infrastructure;
 
 namespace StateBased.ConsistentMessaging.Console
 {

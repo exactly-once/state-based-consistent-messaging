@@ -24,7 +24,7 @@ namespace StateBased.ConsistentMessaging.Console
         public Guid GameId { get; set; } 
     }
 
-    class Message
+    abstract class Message
     {
         public Guid Id { get; set; }
     }

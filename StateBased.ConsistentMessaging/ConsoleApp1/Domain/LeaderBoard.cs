@@ -8,34 +8,32 @@ namespace StateBased.ConsistentMessaging.Console
 
         public void Handle(IHandlerContext context, Hit @event)
         {
-            Data.Apply(new HitRecorded());
+            Data.Apply(new TargetHit());
         }
 
         public void Handle(IHandlerContext context, Missed @event)
         {
-            Data.Apply(new MissRecorded());
+            Data.Apply(new TargetMissed());
         }
-
-        public void Print() => System.Console.WriteLine($"Hits: {Data.NumberOfHits}\tMisses: {Data.NumberOfMisses}");
 
         public class LeaderBoardData : EventSourcedData
         {
             public int NumberOfHits { get; set; }
             public int NumberOfMisses { get; set; }
 
-            public void When(HitRecorded @event)
+            public void When(TargetHit @event)
             {
                 NumberOfHits++;
             }
 
-            public void When(MissRecorded @event)
+            public void When(TargetMissed @event)
             {
                 NumberOfMisses++;
             }
         }
 
-        public class HitRecorded { }
+        public class TargetHit {}
 
-        public class MissRecorded{}
+        public class TargetMissed {}
     }
 }
