@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using StateBased.ConsistentMessaging.Console.Infrastructure;
+using StateBased.ConsistentMessaging.Domain;
+using StateBased.ConsistentMessaging.Infrastructure;
 
 [assembly: InternalsVisibleTo("StateBased.ConsistentMessaging.Tests")]
 
-namespace StateBased.ConsistentMessaging.Console
+namespace StateBased.ConsistentMessaging
 {
     class Program
     {

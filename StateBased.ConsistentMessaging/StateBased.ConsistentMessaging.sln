@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29326.143
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StateBased.ConsistentMessaging.Console", "ConsoleApp1\StateBased.ConsistentMessaging.Console.csproj", "{34BDAA91-9474-4904-A6EA-9D947D96844B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StateBased.ConsistentMessaging", "StateBased.ConsistentMessaging\StateBased.ConsistentMessaging.csproj", "{34BDAA91-9474-4904-A6EA-9D947D96844B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StateBased.ConsistentMessaging.Tests", "StateBased.ConsistenMessaging.Tests\StateBased.ConsistentMessaging.Tests.csproj", "{D48938B1-FAD2-407B-8DEE-DECC9FB8A1B7}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StateBased.ConsistentMessaging.Tests", "StateBased.ConsistentMessaging.Tests\StateBased.ConsistentMessaging.Tests.csproj", "{D48938B1-FAD2-407B-8DEE-DECC9FB8A1B7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

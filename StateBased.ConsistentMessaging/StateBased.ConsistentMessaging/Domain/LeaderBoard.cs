@@ -1,6 +1,6 @@
-﻿using StateBased.ConsistentMessaging.Console.Infrastructure;
+﻿using StateBased.ConsistentMessaging.Infrastructure;
 
-namespace StateBased.ConsistentMessaging.Console
+namespace StateBased.ConsistentMessaging.Domain
 {
     class LeaderBoard
     {

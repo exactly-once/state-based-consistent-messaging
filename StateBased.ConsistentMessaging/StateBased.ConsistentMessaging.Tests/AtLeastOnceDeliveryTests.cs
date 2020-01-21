@@ -4,8 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using NServiceBus.Raw;
 using NUnit.Framework;
-using StateBased.ConsistentMessaging.Console;
-using StateBased.ConsistentMessaging.Console.Infrastructure;
+using StateBased.ConsistentMessaging.Domain;
+using StateBased.ConsistentMessaging.Infrastructure;
 
 namespace StateBased.ConsistentMessaging.Tests
 {

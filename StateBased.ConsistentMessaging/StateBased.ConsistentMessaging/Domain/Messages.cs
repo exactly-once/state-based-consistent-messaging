@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace StateBased.ConsistentMessaging.Console
+namespace StateBased.ConsistentMessaging.Domain
 {
     class FireAt : Message
     {

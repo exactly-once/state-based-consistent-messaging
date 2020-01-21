@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 using NServiceBus.Extensibility;
 using NServiceBus.Routing;
 using NServiceBus.Transport;
+using StateBased.ConsistentMessaging.Domain;
 
-namespace StateBased.ConsistentMessaging.Console.Infrastructure
+namespace StateBased.ConsistentMessaging.Infrastructure
 {
     static class DispatchExtensions
     {

@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Collections.Generic;
 
-namespace StateBased.ConsistentMessaging.Console.Infrastructure
+namespace StateBased.ConsistentMessaging.Infrastructure
 {
     abstract class EventSourcedData
     {

@@ -4,9 +4,9 @@ using Microsoft.Azure.Cosmos.Table;
 using NServiceBus;
 using NServiceBus.Logging;
 using NServiceBus.Raw;
-using StateBased.ConsistentMessaging.Console.Infrastructure;
+using StateBased.ConsistentMessaging.Domain;
 
-namespace StateBased.ConsistentMessaging.Console
+namespace StateBased.ConsistentMessaging.Infrastructure
 {
     class EndpointBuilder
     {

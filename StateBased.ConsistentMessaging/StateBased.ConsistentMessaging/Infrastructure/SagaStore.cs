@@ -6,7 +6,7 @@ using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
 using Streamstone;
 
-namespace StateBased.ConsistentMessaging.Console.Infrastructure
+namespace StateBased.ConsistentMessaging.Infrastructure
 {
     class SagaStore
     {

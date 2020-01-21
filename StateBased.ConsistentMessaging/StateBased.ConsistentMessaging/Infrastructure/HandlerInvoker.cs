@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using StateBased.ConsistentMessaging.Domain;
 
-namespace StateBased.ConsistentMessaging.Console.Infrastructure
+namespace StateBased.ConsistentMessaging.Infrastructure
 {
     class HandlerInvoker
     {

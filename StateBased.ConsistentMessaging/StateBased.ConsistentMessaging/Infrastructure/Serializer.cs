@@ -2,8 +2,9 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using StateBased.ConsistentMessaging.Domain;
 
-namespace StateBased.ConsistentMessaging.Console.Infrastructure
+namespace StateBased.ConsistentMessaging.Infrastructure
 {
     public static class Serializer {
 

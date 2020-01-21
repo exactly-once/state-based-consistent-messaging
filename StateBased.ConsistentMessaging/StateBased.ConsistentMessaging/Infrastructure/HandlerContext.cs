@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
+using StateBased.ConsistentMessaging.Domain;
 
-namespace StateBased.ConsistentMessaging.Console.Infrastructure
+namespace StateBased.ConsistentMessaging.Infrastructure
 {
     class HandlerContext : IHandlerContext
     {
