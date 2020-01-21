@@ -32,7 +32,7 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
 
             var operation = new TransportOperation(
                 request,
-                new UnicastAddressTag(Program.EndpointName));
+                new UnicastAddressTag(EndpointBuilder.EndpointName));
 
             return endpoint.Dispatch(
                 outgoingMessages: new TransportOperations(operation),

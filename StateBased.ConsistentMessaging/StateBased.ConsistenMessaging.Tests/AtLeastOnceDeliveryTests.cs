@@ -20,7 +20,7 @@ namespace StateBased.ConsistentMessaging.Tests
         {
             runs = new ConcurrentDictionary<Guid, (TaskCompletionSource<bool>, int)>();
 
-            (endpoint, storage) = await Program.SetupEndpoint((runId, _, output) =>
+            (endpoint, storage) = await EndpointBuilder.SetupEndpoint((runId, _, output) =>
             {
                 var pendingDelta = output.Length - 1;
 

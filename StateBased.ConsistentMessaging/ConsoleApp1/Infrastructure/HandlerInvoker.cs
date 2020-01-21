@@ -4,14 +4,17 @@ using System.Threading.Tasks;
 
 namespace StateBased.ConsistentMessaging.Console.Infrastructure
 {
-    static class HandlerInvoker
+    class HandlerInvoker
     {
-        private static SagaStore SagaStore;
+        private readonly SagaStore sagaStore;
 
-        public static async Task<Message[]> OnMessage(Message message, SagaStore sagaStore)
+        public HandlerInvoker(SagaStore sagaStore)
         {
-            SagaStore = sagaStore;
+            this.sagaStore = sagaStore;
+        }
 
+        public async Task<Message[]> Process(Message message)
+        {
             Func<Task<Message[]>> invoke;
             
             if (message is FireAt fireAt)
@@ -40,25 +43,25 @@ namespace StateBased.ConsistentMessaging.Console.Infrastructure
             return outputMessages;
         }
 
-        static async Task<Message[]> Invoke<TSaga, TSagaData>(Guid sagaId, Message inputMessage) 
+        async Task<Message[]> Invoke<TSaga, TSagaData>(Guid sagaId, Message inputMessage) 
             where TSaga : new() 
             where TSagaData : EventSourcedData, new()
         {
             var messageId = inputMessage.Id;
 
-            var (saga, stream, duplicate) = await SagaStore.LoadSaga<TSagaData>(sagaId, messageId);
+            var (saga, stream, duplicate) = await sagaStore.LoadSaga<TSagaData>(sagaId, messageId);
 
             var outputMessages = InvokeHandler<TSaga, TSagaData>(inputMessage, saga);
 
             if (duplicate == false)
             { 
-                await SagaStore.UpdateSaga(stream, saga.Changes, messageId);
+                await sagaStore.UpdateSaga(stream, saga.Changes, messageId);
             }
 
             return outputMessages.ToArray();
         }
 
-        private static List<Message> InvokeHandler<TSaga, TSagaData>(object inputMessage, TSagaData saga)
+        static List<Message> InvokeHandler<TSaga, TSagaData>(object inputMessage, TSagaData saga)
             where TSaga : new() where TSagaData : EventSourcedData, new()
         {
             var handler = new TSaga();
