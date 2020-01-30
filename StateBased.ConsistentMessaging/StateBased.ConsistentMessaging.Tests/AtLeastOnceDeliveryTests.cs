@@ -107,5 +107,23 @@ namespace StateBased.ConsistentMessaging.Tests
 
             Assert.AreEqual(hits + misses, 1);
         }
+
+        [Test]
+        public async Task ScenarioD()
+        {
+            var gameId = Guid.NewGuid();
+
+            var hit = new Hit {GameId = gameId, Id = Guid.NewGuid()};
+
+            await DispatchAndWait(new Message[] { hit, hit });
+
+            var (leaderBoard, _, __) = await storage.LoadState<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
+            
+            var hits = leaderBoard.NumberOfHits;
+            var misses = leaderBoard.NumberOfMisses;
+
+            Assert.AreEqual(hits, 1);
+            Assert.AreEqual(misses, 0);
+        }
     }
 }

@@ -43,14 +43,10 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 
                 var @event = type != null ? JsonConvert.DeserializeObject(data, type) : null;
 
-                if (mId != messageId && isDuplicate)
-                {
-                    return true;
-                }
-
                 if (mId == messageId)
                 {
                     isDuplicate = true;
+                    return true;
                 }
 
                 if (@event != null)
