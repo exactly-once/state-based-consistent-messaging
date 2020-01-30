@@ -16,7 +16,7 @@ namespace StateBased.ConsistentMessaging.Domain
             Data.Apply(new TargetMissed());
         }
 
-        public class LeaderBoardData : EventSourcedData
+        public class LeaderBoardData : EventSourcedState
         {
             public int NumberOfHits { get; set; }
             public int NumberOfMisses { get; set; }

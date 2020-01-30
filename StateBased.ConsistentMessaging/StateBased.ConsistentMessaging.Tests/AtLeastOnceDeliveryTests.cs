@@ -12,7 +12,7 @@ namespace StateBased.ConsistentMessaging.Tests
     public class AtLeastOnceDeliveryTests
     {
         private IReceivingRawEndpoint endpoint;
-        private SagaStore storage;
+        private StateStore storage;
         private ConcurrentDictionary<Guid, (TaskCompletionSource<bool> cs, int pending)> runs;
 
         [SetUp]
@@ -64,7 +64,7 @@ namespace StateBased.ConsistentMessaging.Tests
             await DispatchAndWait(new Message[] { move });
             await DispatchAndWait(new Message[] { fire, fire });
 
-            var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
+            var (leaderBoard, _, __) = await storage.LoadState<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
 
             Assert.AreEqual(1, leaderBoard.NumberOfHits);
         }
@@ -83,7 +83,7 @@ namespace StateBased.ConsistentMessaging.Tests
             await DispatchAndWait(new Message[] { secondMove });
             await DispatchAndWait(new Message[] { fire });
 
-            var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
+            var (leaderBoard, _, __) = await storage.LoadState<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
 
             Assert.AreEqual(1, leaderBoard.NumberOfHits);
         }
@@ -100,7 +100,7 @@ namespace StateBased.ConsistentMessaging.Tests
             await DispatchAndWait(new Message[] { move });
             await DispatchAndWait(new Message[] { fire, fire, secondMove });
 
-            var (leaderBoard, _, __) = await storage.LoadSaga<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
+            var (leaderBoard, _, __) = await storage.LoadState<LeaderBoard.LeaderBoardData>(gameId, Guid.Empty);
             
             var hits = leaderBoard.NumberOfHits;
             var misses = leaderBoard.NumberOfMisses;

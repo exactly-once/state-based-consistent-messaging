@@ -8,21 +8,21 @@ using Streamstone;
 
 namespace StateBased.ConsistentMessaging.Infrastructure
 {
-    class SagaStore
+    class StateStore
     {
         readonly CloudTable table;
 
-        public SagaStore(CloudTable table)
+        public StateStore(CloudTable table)
         {
             this.table = table;
         }
 
-        public async Task<(TSagaData, Stream, bool)> LoadSaga<TSagaData>(Guid sagaId, Guid messageId) where TSagaData : EventSourcedData, new()
+        public async Task<(THandlerState, Stream, bool)> LoadState<THandlerState>(Guid stateId, Guid messageId) where THandlerState : EventSourcedState, new()
         {
-            var streamId = $"{typeof(TSagaData).Name}-{sagaId}";
+            var streamId = $"{typeof(THandlerState).Name}-{stateId}";
             var partition = new Partition(table, streamId);
 
-            var saga = new TSagaData();
+            var state = new THandlerState();
 
             var existent = await Stream.TryOpenAsync(partition);
 
@@ -30,7 +30,7 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             {
                 var createdStream = await Stream.ProvisionAsync(partition);
 
-                return (saga, createdStream, false);
+                return (state, createdStream, false);
             }
 
             var isDuplicate = false;
@@ -55,15 +55,15 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 
                 if (@event != null)
                 {
-                    saga.Apply(@event);
+                    state.Apply(@event);
                 }
 
                 return isDuplicate;
             });
 
-            saga.Changes.Clear();
+            state.Changes.Clear();
 
-            return (saga, stream, isDuplicate);
+            return (state, stream, isDuplicate);
         }
 
         private static async Task<Stream> ReadStream(Partition partition, Func<EventProperties, bool> process)
@@ -88,7 +88,7 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             return slice.Stream;
         }
 
-        public Task UpdateSaga(Stream stream, List<object> changes, Guid messageId)
+        public Task UpdateState(Stream stream, List<object> changes, Guid messageId)
         {
             if (changes.Count == 0)
             {

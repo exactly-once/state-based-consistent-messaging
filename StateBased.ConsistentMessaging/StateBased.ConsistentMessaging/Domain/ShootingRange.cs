@@ -31,7 +31,7 @@ namespace StateBased.ConsistentMessaging.Domain
             Data.Apply(new TargetMoved{Position = command.Position});
         }
 
-        public class ShootingRangeData : EventSourcedData
+        public class ShootingRangeData : EventSourcedState
         {
             public int TargetPosition { get; set; }
 

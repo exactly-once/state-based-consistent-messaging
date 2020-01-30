@@ -25,12 +25,12 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             return table;
         }
 
-        internal static async Task<(IReceivingRawEndpoint, SagaStore)> SetupEndpoint(Action<Guid, Message, Message[]> messageProcessed)
+        internal static async Task<(IReceivingRawEndpoint, StateStore)> SetupEndpoint(Action<Guid, Message, Message[]> messageProcessed)
         {
             var storageTable = await PrepareStorageTable();
 
-            var sagaStore = new SagaStore(storageTable);
-            var handlerInvoker = new HandlerInvoker(sagaStore);
+            var stateStore = new StateStore(storageTable);
+            var handlerInvoker = new HandlerInvoker(stateStore);
 
             var endpointConfiguration = RawEndpointConfiguration.Create(
                 endpointName: EndpointName,
@@ -56,7 +56,7 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 
             var endpoint =  await RawEndpoint.Start(endpointConfiguration);
 
-            return (endpoint, sagaStore);
+            return (endpoint, stateStore);
         }
     }
 }

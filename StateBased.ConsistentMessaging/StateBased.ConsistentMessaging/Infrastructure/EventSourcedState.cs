@@ -2,7 +2,7 @@
 
 namespace StateBased.ConsistentMessaging.Infrastructure
 {
-    abstract class EventSourcedData
+    abstract class EventSourcedState
     {
         public List<object> Changes = new List<object>();
 

@@ -7,11 +7,11 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 {
     class HandlerInvoker
     {
-        private readonly SagaStore sagaStore;
+        private readonly StateStore stateStore;
 
-        public HandlerInvoker(SagaStore sagaStore)
+        public HandlerInvoker(StateStore stateStore)
         {
-            this.sagaStore = sagaStore;
+            this.stateStore = stateStore;
         }
 
         public async Task<Message[]> Process(Message message)
@@ -44,31 +44,31 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             return outputMessages;
         }
 
-        async Task<Message[]> Invoke<TSaga, TSagaData>(Guid sagaId, Message inputMessage) 
-            where TSaga : new() 
-            where TSagaData : EventSourcedData, new()
+        async Task<Message[]> Invoke<THandler, THandlerState>(Guid stateId, Message inputMessage) 
+            where THandler : new() 
+            where THandlerState : EventSourcedState, new()
         {
             var messageId = inputMessage.Id;
 
-            var (saga, stream, duplicate) = await sagaStore.LoadSaga<TSagaData>(sagaId, messageId);
+            var (state, stream, duplicate) = await stateStore.LoadState<THandlerState>(stateId, messageId);
 
-            var outputMessages = InvokeHandler<TSaga, TSagaData>(inputMessage, saga);
+            var outputMessages = InvokeHandler<THandler, THandlerState>(inputMessage, state);
 
             if (duplicate == false)
             { 
-                await sagaStore.UpdateSaga(stream, saga.Changes, messageId);
+                await stateStore.UpdateState(stream, state.Changes, messageId);
             }
 
             return outputMessages.ToArray();
         }
 
-        static List<Message> InvokeHandler<TSaga, TSagaData>(object inputMessage, TSagaData saga)
-            where TSaga : new() where TSagaData : EventSourcedData, new()
+        static List<Message> InvokeHandler<THandler, THandlerState>(object inputMessage, THandlerState state)
+            where THandler : new() where THandlerState : EventSourcedState, new()
         {
-            var handler = new TSaga();
+            var handler = new THandler();
             var handlerContext = new HandlerContext();
 
-            ((dynamic) handler).Data = saga;
+            ((dynamic) handler).Data = state;
             ((dynamic) handler).Handle(handlerContext, (dynamic) inputMessage);
             
             return handlerContext.Messages;
