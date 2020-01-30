@@ -37,19 +37,14 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 
             var stream = await ReadStream(partition, properties =>
             {
-                var mId = properties["MessageId"].GuidValue.GetValueOrDefault();
-                var data = properties["Data"].StringValue;
-                var type = properties.ContainsKey("Type") ? Type.GetType(properties["Type"].StringValue) : null;
-
-                var @event = type != null ? JsonConvert.DeserializeObject(data, type) : null;
+                var mId = properties["MessageId"].GuidValue;
+                var @event = DeserializeEvent(properties);
 
                 if (mId == messageId)
                 {
                     isDuplicate = true;
-                    return true;
-                }
-
-                if (@event != null)
+                } 
+                else if (@event != null)
                 {
                     state.Apply(@event);
                 }
@@ -60,9 +55,20 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             state.Changes.Clear();
 
             return (state, stream, isDuplicate);
+
+            
         }
 
-        private static async Task<Stream> ReadStream(Partition partition, Func<EventProperties, bool> process)
+        object DeserializeEvent(EventProperties properties)
+        {
+            var data = properties["Data"].StringValue;
+            var type = properties.ContainsKey("Type") ? Type.GetType(properties["Type"].StringValue) : null;
+
+            var @event = type != null ? JsonConvert.DeserializeObject(data, type) : null;
+            return @event;
+        }
+
+        static async Task<Stream> ReadStream(Partition partition, Func<EventProperties, bool> process)
         {
             StreamSlice<EventProperties> slice;
 
