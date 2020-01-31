@@ -4,6 +4,8 @@ namespace StateBased.ConsistentMessaging.Domain
 {
     class ShootingRange
     {
+        public const int MaxAttemptsInARound = 2;
+
         public ShootingRangeData Data { get; set; }
 
         public void Handle(IHandlerContext context, FireAt command)
@@ -24,26 +26,44 @@ namespace StateBased.ConsistentMessaging.Domain
                     GameId = command.GameId
                 });
             }
+
+            if (Data.NumberOfAttempts + 1 >= MaxAttemptsInARound)
+            {
+                Data.Apply(new NewRoundStarted { Position = context.Random.Next(0, 100)});
+            }
+            else
+            {
+                Data.Apply(new AttemptMade());
+            }
         }
 
-        public void Handle(IHandlerContext context, MoveTarget command)
+        public void Handle(IHandlerContext context, StartNewRound command)
         {
-            Data.Apply(new TargetMoved{Position = command.Position});
+            Data.Apply(new NewRoundStarted{Position = command.Position});
         }
 
         public class ShootingRangeData : EventSourcedState
         {
             public int TargetPosition { get; set; }
 
-            public void When(TargetMoved @event)
+            public int NumberOfAttempts { get; set; }
+
+            public void When(NewRoundStarted @event)
             {
                 TargetPosition = @event.Position;
             }
+
+            public void When(AttemptMade @event)
+            {
+                NumberOfAttempts++;
+            }
         }
 
-        public class TargetMoved
+        public class NewRoundStarted
         {
             public int Position { get; set; }
         }
+
+        public class AttemptMade { }
     }
 }

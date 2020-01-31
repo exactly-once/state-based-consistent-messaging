@@ -22,7 +22,7 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             {
                 invoke = () => Invoke<ShootingRange, ShootingRange.ShootingRangeData>(fireAt.GameId, fireAt);
             } 
-            else if (message is MoveTarget moveTarget)
+            else if (message is StartNewRound moveTarget)
             {
                 invoke = () => Invoke<ShootingRange, ShootingRange.ShootingRangeData>(moveTarget.GameId, moveTarget);
             } 

@@ -8,7 +8,7 @@ namespace StateBased.ConsistentMessaging.Domain
         public int Position { get; set; }
     }
 
-    class MoveTarget : Message
+    class StartNewRound : Message
     {
         public Guid GameId { get; set; }
         public int Position { get; set; }

@@ -21,7 +21,7 @@ namespace StateBased.ConsistentMessaging
             new ConsoleRunner(new Dictionary<char, Func<int, Task>>
             {
                 {'f', v => endpoint.Send(new FireAt {Id = Guid.NewGuid(), GameId = gameId, Position = v} )},
-                {'m', v => endpoint.Send(new MoveTarget {Id = Guid.NewGuid(), GameId = gameId, Position = v})}
+                {'s', v => endpoint.Send(new StartNewRound {Id = Guid.NewGuid(), GameId = gameId, Position = v})}
             }).Run();
         }
     }
@@ -39,7 +39,7 @@ namespace StateBased.ConsistentMessaging
         {
             while (true)
             {
-                var input = System.Console.ReadLine();
+                var input = Console.ReadLine();
 
                 if (TryParse(input, out var code, out var value))
                 {

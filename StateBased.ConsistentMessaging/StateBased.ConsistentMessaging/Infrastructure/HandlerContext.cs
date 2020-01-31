@@ -8,14 +8,19 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 {
     class HandlerContext : IHandlerContext
     {
-        readonly Guid seed;
+        Guid seed;
+        
         int guidIndex;
+        
+        public Random Random { get; }
 
         public List<Message> Messages { get; set; } = new List<Message>();
 
         public HandlerContext(Guid seed)
         {
             this.seed = seed;
+
+            Random = new Random(seed.ToString().GetHashCode());
         }
 
         public void Publish(Message message)
@@ -39,5 +44,7 @@ namespace StateBased.ConsistentMessaging.Infrastructure
         void Publish(Message message);
 
         Guid NewGuid();
+
+        Random Random { get; }
     }
 }
