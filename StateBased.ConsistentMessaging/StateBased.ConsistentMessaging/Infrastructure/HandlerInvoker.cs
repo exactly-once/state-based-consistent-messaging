@@ -62,11 +62,11 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             return outputMessages.ToArray();
         }
 
-        static List<Message> InvokeHandler<THandler, THandlerState>(object inputMessage, THandlerState state)
+        static List<Message> InvokeHandler<THandler, THandlerState>(Message inputMessage, THandlerState state)
             where THandler : new() where THandlerState : EventSourcedState, new()
         {
             var handler = new THandler();
-            var handlerContext = new HandlerContext();
+            var handlerContext = new HandlerContext(inputMessage.Id);
 
             ((dynamic) handler).Data = state;
             ((dynamic) handler).Handle(handlerContext, (dynamic) inputMessage);

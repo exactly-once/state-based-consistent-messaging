@@ -12,7 +12,7 @@ namespace StateBased.ConsistentMessaging.Domain
             {
                 context.Publish(new Hit
                 {
-                    Id = command.Id,
+                    Id = context.NewGuid(),
                     GameId = command.GameId
                 });
             }
@@ -20,7 +20,7 @@ namespace StateBased.ConsistentMessaging.Domain
             {
                 context.Publish(new Missed
                 {
-                    Id = command.Id,
+                    Id = context.NewGuid(),
                     GameId = command.GameId
                 });
             }
