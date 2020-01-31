@@ -29,41 +29,25 @@ namespace StateBased.ConsistentMessaging.Domain
 
             if (Data.NumberOfAttempts + 1 >= MaxAttemptsInARound)
             {
-                Data.Apply(new NewRoundStarted { Position = context.Random.Next(0, 100)});
+                Data.NumberOfAttempts = 0;
+                Data.TargetPosition = context.Random.Next(0, 100);
             }
             else
             {
-                Data.Apply(new AttemptMade());
+                Data.NumberOfAttempts++;
             }
         }
 
         public void Handle(IHandlerContext context, StartNewRound command)
         {
-            Data.Apply(new NewRoundStarted{Position = command.Position});
+            Data.NumberOfAttempts = 0;
+            Data.TargetPosition = command.Position;
         }
 
-        public class ShootingRangeData : EventSourcedState
+        public class ShootingRangeData
         {
             public int TargetPosition { get; set; }
-
             public int NumberOfAttempts { get; set; }
-
-            public void When(NewRoundStarted @event)
-            {
-                TargetPosition = @event.Position;
-            }
-
-            public void When(AttemptMade @event)
-            {
-                NumberOfAttempts++;
-            }
         }
-
-        public class NewRoundStarted
-        {
-            public int Position { get; set; }
-        }
-
-        public class AttemptMade { }
     }
 }

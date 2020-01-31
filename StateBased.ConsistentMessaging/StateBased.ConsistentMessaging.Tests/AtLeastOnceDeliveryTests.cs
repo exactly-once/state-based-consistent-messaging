@@ -58,7 +58,7 @@ namespace StateBased.ConsistentMessaging.Tests
         {
             var gameId = Guid.NewGuid();
 
-            var move = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 1};
+            var move = new StartNewRound {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
             var fire = new FireAt {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
 
             await DispatchAndWait(new Message[] { move });
@@ -74,9 +74,9 @@ namespace StateBased.ConsistentMessaging.Tests
         {
             var gameId = Guid.NewGuid();
 
-            var firstMove = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 1};
+            var firstMove = new StartNewRound {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
             var fire = new FireAt {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
-            var secondMove = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 2};
+            var secondMove = new StartNewRound {Id = Guid.NewGuid(), GameId = gameId, Position = 2};
 
             await DispatchAndWait(new Message[] { firstMove });
             await DispatchAndWait(new Message[] { fire });
@@ -93,9 +93,9 @@ namespace StateBased.ConsistentMessaging.Tests
         {
             var gameId = Guid.NewGuid();
 
-            var move = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 1};
+            var move = new StartNewRound {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
             var fire = new FireAt {Id = Guid.NewGuid(), GameId = gameId, Position = 1};
-            var secondMove = new MoveTarget{Id = Guid.NewGuid(), GameId = gameId, Position = 2};
+            var secondMove = new StartNewRound {Id = Guid.NewGuid(), GameId = gameId, Position = 2};
 
             await DispatchAndWait(new Message[] { move });
             await DispatchAndWait(new Message[] { fire, fire, secondMove });
