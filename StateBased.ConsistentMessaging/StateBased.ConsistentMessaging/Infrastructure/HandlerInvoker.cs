@@ -46,7 +46,7 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 
         async Task<Message[]> Invoke<THandler, THandlerState>(Guid stateId, Message inputMessage) 
             where THandler : new() 
-            where THandlerState : EventSourcedState, new()
+            where THandlerState : new()
         {
             var messageId = inputMessage.Id;
 
@@ -56,14 +56,14 @@ namespace StateBased.ConsistentMessaging.Infrastructure
 
             if (duplicate == false)
             { 
-                await stateStore.UpdateState(stream, state.Changes, messageId);
+                await stateStore.SaveState(stream, state, messageId);
             }
 
             return outputMessages.ToArray();
         }
 
         static List<Message> InvokeHandler<THandler, THandlerState>(Message inputMessage, THandlerState state)
-            where THandler : new() where THandlerState : EventSourcedState, new()
+            where THandler : new() where THandlerState : new()
         {
             var handler = new THandler();
             var handlerContext = new HandlerContext(inputMessage.Id);

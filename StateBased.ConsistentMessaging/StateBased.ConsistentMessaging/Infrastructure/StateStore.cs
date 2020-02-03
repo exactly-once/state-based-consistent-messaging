@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.Cosmos.Table;
 using Newtonsoft.Json;
@@ -17,7 +15,7 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             this.table = table;
         }
 
-        public async Task<(THandlerState, Stream, bool)> LoadState<THandlerState>(Guid stateId, Guid messageId) where THandlerState : EventSourcedState, new()
+        public async Task<(THandlerState, Stream, bool)> LoadState<THandlerState>(Guid stateId, Guid messageId) where THandlerState : new()
         {
             var streamId = $"{typeof(THandlerState).Name}-{stateId}";
             var partition = new Partition(table, streamId);
@@ -38,34 +36,31 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             var stream = await ReadStream(partition, properties =>
             {
                 var mId = properties["MessageId"].GuidValue;
-                var @event = DeserializeEvent(properties);
+                var nextState = DeserializeEvent<THandlerState>(properties);
 
                 if (mId == messageId)
                 {
                     isDuplicate = true;
                 } 
-                else if (@event != null)
+                else
                 {
-                    state.Apply(@event);
+                    state = nextState;
                 }
 
                 return isDuplicate;
             });
-
-            state.Changes.Clear();
 
             return (state, stream, isDuplicate);
 
             
         }
 
-        object DeserializeEvent(EventProperties properties)
+        THandlerState DeserializeEvent<THandlerState>(EventProperties properties)
         {
             var data = properties["Data"].StringValue;
-            var type = properties.ContainsKey("Type") ? Type.GetType(properties["Type"].StringValue) : null;
+            var state = JsonConvert.DeserializeObject<THandlerState>(data);
 
-            var @event = type != null ? JsonConvert.DeserializeObject(data, type) : null;
-            return @event;
+            return state;
         }
 
         static async Task<Stream> ReadStream(Partition partition, Func<EventProperties, bool> process)
@@ -90,28 +85,17 @@ namespace StateBased.ConsistentMessaging.Infrastructure
             return slice.Stream;
         }
 
-        public Task UpdateState(Stream stream, List<object> changes, Guid messageId)
+        public Task SaveState(Stream stream, object stateVersion, Guid messageId)
         {
-            if (changes.Count == 0)
+            var eventId = EventId.From(Guid.NewGuid());
+
+            var properties = EventProperties.From(new
             {
-                changes.Add(null);
-            }
+                MessageId = messageId,
+                Data = JsonConvert.SerializeObject(stateVersion)
+            });
 
-            var events = changes.Select(c =>
-            {
-                var eventId = EventId.From(Guid.NewGuid());
-
-                var properties = EventProperties.From(new
-                {
-                    MessageId = messageId,
-                    Type = c?.GetType().FullName,
-                    Data = JsonConvert.SerializeObject(c)
-                });
-
-                return new EventData(eventId, properties);
-            }).ToArray();
-
-            return Stream.WriteAsync(stream, events);
+            return Stream.WriteAsync(stream, new EventData(eventId, properties));
         }
     }
 }
